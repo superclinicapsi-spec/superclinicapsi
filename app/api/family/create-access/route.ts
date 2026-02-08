@@ -1,12 +1,20 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
 // Cliente admin com service_role key para criar usuários
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-);
+// Instanciação lazy para evitar erro durante o build
+let supabaseAdmin: SupabaseClient | null = null;
+
+function getSupabaseAdmin(): SupabaseClient {
+    if (!supabaseAdmin) {
+        supabaseAdmin = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!,
+            { auth: { autoRefreshToken: false, persistSession: false } }
+        );
+    }
+    return supabaseAdmin;
+}
 
 export async function POST(request: NextRequest) {
     try {
@@ -29,7 +37,7 @@ export async function POST(request: NextRequest) {
         }
 
         // 1. Criar usuário no Supabase Auth
-        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        const { data: authData, error: authError } = await getSupabaseAdmin().auth.admin.createUser({
             email,
             password,
             email_confirm: true, // Confirma email automaticamente
@@ -53,7 +61,7 @@ export async function POST(request: NextRequest) {
         const userId = authData.user.id;
 
         // 2. Criar perfil do usuário
-        const { error: profileError } = await supabaseAdmin
+        const { error: profileError } = await getSupabaseAdmin()
             .from('users_profile')
             .insert({
                 id: userId,
@@ -63,12 +71,12 @@ export async function POST(request: NextRequest) {
 
         if (profileError) {
             // Rollback: deletar usuário se falhar
-            await supabaseAdmin.auth.admin.deleteUser(userId);
+            await getSupabaseAdmin().auth.admin.deleteUser(userId);
             throw profileError;
         }
 
         // 3. Criar vínculo família-paciente
-        const { error: accessError } = await supabaseAdmin
+        const { error: accessError } = await getSupabaseAdmin()
             .from('family_portal_access')
             .insert({
                 user_id: userId,
@@ -82,8 +90,8 @@ export async function POST(request: NextRequest) {
 
         if (accessError) {
             // Rollback completo
-            await supabaseAdmin.from('users_profile').delete().eq('id', userId);
-            await supabaseAdmin.auth.admin.deleteUser(userId);
+            await getSupabaseAdmin().from('users_profile').delete().eq('id', userId);
+            await getSupabaseAdmin().auth.admin.deleteUser(userId);
             throw accessError;
         }
 
@@ -116,7 +124,7 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        const { data, error } = await supabaseAdmin
+        const { data, error } = await getSupabaseAdmin()
             .from('family_portal_access')
             .select('*')
             .eq('patient_id', patientId)
@@ -149,7 +157,7 @@ export async function DELETE(request: NextRequest) {
         }
 
         // Buscar o acesso para pegar o user_id
-        const { data: access } = await supabaseAdmin
+        const { data: access } = await getSupabaseAdmin()
             .from('family_portal_access')
             .select('user_id')
             .eq('id', accessId)
@@ -157,21 +165,21 @@ export async function DELETE(request: NextRequest) {
 
         if (access) {
             // Deletar acesso
-            await supabaseAdmin
+            await getSupabaseAdmin()
                 .from('family_portal_access')
                 .delete()
                 .eq('id', accessId);
 
             // Verificar se usuário tem outros acessos
-            const { data: otherAccess } = await supabaseAdmin
+            const { data: otherAccess } = await getSupabaseAdmin()
                 .from('family_portal_access')
                 .select('id')
                 .eq('user_id', access.user_id);
 
             // Se não tem outros acessos, deletar usuário
             if (!otherAccess || otherAccess.length === 0) {
-                await supabaseAdmin.from('users_profile').delete().eq('id', access.user_id);
-                await supabaseAdmin.auth.admin.deleteUser(access.user_id);
+                await getSupabaseAdmin().from('users_profile').delete().eq('id', access.user_id);
+                await getSupabaseAdmin().auth.admin.deleteUser(access.user_id);
             }
         }
 
