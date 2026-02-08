@@ -16,7 +16,7 @@ import {
     ClipboardList,
     BarChart3,
     ChevronLeft,
-    ChevronRight,
+    X,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -41,18 +41,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     const pathname = usePathname()
     const router = useRouter()
     const [sidebarOpen, setSidebarOpen] = useState(false)
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+    const [isMobile, setIsMobile] = useState(false)
 
-    // Detectar tamanho da tela
+    // Detectar mobile
     useEffect(() => {
-        const handleResize = () => {
-            if (window.innerWidth < 1024) {
-                setSidebarCollapsed(true)
-            }
-        }
-        handleResize()
-        window.addEventListener('resize', handleResize)
-        return () => window.removeEventListener('resize', handleResize)
+        const checkMobile = () => setIsMobile(window.innerWidth < 1024)
+        checkMobile()
+        window.addEventListener('resize', checkMobile)
+        return () => window.removeEventListener('resize', checkMobile)
     }, [])
 
     const handleLogout = async () => {
@@ -62,44 +58,56 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         router.refresh()
     }
 
-    const sidebarWidth = sidebarCollapsed ? '72px' : '260px'
-
     return (
-        <div className="min-h-screen bg-[var(--background)]">
+        <div className="min-h-screen bg-[var(--gray-50)]">
             {/* Mobile Overlay */}
-            {sidebarOpen && (
+            {sidebarOpen && isMobile && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                    className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden"
                     onClick={() => setSidebarOpen(false)}
                 />
             )}
 
-            {/* Sidebar */}
+            {/* Sidebar - Desktop e Mobile */}
             <aside
                 className={`
-                    fixed left-0 top-0 h-screen bg-white border-r border-[var(--border-subtle)]
-                    flex flex-direction-column z-50 transition-all duration-300 ease-in-out
-                    ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+                    fixed top-0 left-0 h-screen bg-white z-50
+                    border-r border-[var(--gray-200)]
+                    w-[260px] flex flex-col
+                    transition-transform duration-300 ease-out
+                    ${sidebarOpen || !isMobile ? 'translate-x-0' : '-translate-x-full'}
+                    lg:translate-x-0
                 `}
-                style={{ width: sidebarWidth }}
             >
-                <div className="flex flex-col h-full p-4">
-                    {/* Brand */}
-                    <div className={`flex items-center gap-3 mb-6 ${sidebarCollapsed ? 'justify-center' : 'px-2'}`}>
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                            style={{ background: 'linear-gradient(135deg, var(--lavender-500) 0%, var(--sky-500) 100%)' }}>
+                {/* Close button mobile */}
+                {isMobile && (
+                    <button
+                        onClick={() => setSidebarOpen(false)}
+                        className="absolute top-4 right-4 p-2 rounded-lg hover:bg-[var(--gray-100)] text-[var(--gray-500)] lg:hidden"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                )}
+
+                {/* Brand */}
+                <div className="p-5 border-b border-[var(--gray-100)]">
+                    <div className="flex items-center gap-3">
+                        <div
+                            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                            style={{ background: 'linear-gradient(135deg, var(--lavender-500) 0%, var(--sky-400) 100%)' }}
+                        >
                             <Brain className="w-5 h-5 text-white" />
                         </div>
-                        {!sidebarCollapsed && (
-                            <div>
-                                <span className="font-semibold text-[var(--foreground)]">Gabriela</span>
-                                <p className="text-xs text-[var(--foreground-muted)]">Psicóloga</p>
-                            </div>
-                        )}
+                        <div>
+                            <span className="font-semibold text-[var(--gray-900)]">SuperClínica</span>
+                            <p className="text-xs text-[var(--gray-500)]">Psicologia Clínica</p>
+                        </div>
                     </div>
+                </div>
 
-                    {/* Navigation */}
-                    <nav className="flex-1 space-y-1">
+                {/* Navigation */}
+                <nav className="flex-1 p-3 overflow-y-auto">
+                    <div className="space-y-1">
                         {navItems.map((item) => {
                             const isActive = pathname === item.href ||
                                 (item.href !== '/dashboard' && pathname.startsWith(item.href))
@@ -108,100 +116,109 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                                 <Link
                                     key={item.href}
                                     href={item.href}
+                                    onClick={() => setSidebarOpen(false)}
                                     className={`
-                                        flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all
-                                        ${sidebarCollapsed ? 'justify-center' : ''}
+                                        flex items-center gap-3 px-3 py-2.5 rounded-xl
+                                        text-sm font-medium transition-all duration-200
                                         ${isActive
-                                            ? 'bg-[var(--primary-light)] text-[var(--primary)]'
-                                            : 'text-[var(--foreground-secondary)] hover:bg-[var(--gray-100)] hover:text-[var(--foreground)]'
+                                            ? 'bg-[var(--lavender-100)] text-[var(--lavender-700)]'
+                                            : 'text-[var(--gray-600)] hover:bg-[var(--gray-100)] hover:text-[var(--gray-900)]'
                                         }
                                     `}
-                                    onClick={() => setSidebarOpen(false)}
-                                    title={sidebarCollapsed ? item.label : ''}
                                 >
-                                    <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'opacity-100' : 'opacity-70'}`} />
-                                    {!sidebarCollapsed && (
-                                        <span className="text-sm font-medium">{item.label}</span>
-                                    )}
+                                    <item.icon className={`w-5 h-5 ${isActive ? 'text-[var(--lavender-600)]' : 'text-[var(--gray-400)]'}`} />
+                                    <span>{item.label}</span>
                                 </Link>
                             )
                         })}
-                    </nav>
+                    </div>
+                </nav>
 
-                    {/* Collapse Button */}
-                    <button
-                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                        className="hidden lg:flex items-center justify-center w-full p-2 mb-2 rounded-xl text-[var(--foreground-muted)] hover:bg-[var(--gray-100)] hover:text-[var(--foreground)] transition-colors"
-                        title={sidebarCollapsed ? 'Expandir menu' : 'Recolher menu'}
-                    >
-                        {sidebarCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-                        {!sidebarCollapsed && <span className="text-sm ml-2">Recolher</span>}
-                    </button>
+                {/* Profile & Logout */}
+                <div className="p-3 border-t border-[var(--gray-100)]">
+                    {/* User Profile */}
+                    <div className="flex items-center gap-3 px-3 py-3 mb-2 rounded-xl bg-[var(--gray-50)]">
+                        <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold"
+                            style={{ background: 'linear-gradient(135deg, var(--lavender-200) 0%, var(--sky-200) 100%)', color: 'var(--lavender-700)' }}>
+                            GFL
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-[var(--gray-900)] truncate">Gabriela Fernandes</p>
+                            <p className="text-xs text-[var(--gray-500)] truncate">CRP 06/123456</p>
+                        </div>
+                    </div>
 
                     {/* Logout */}
-                    <div className="pt-4 border-t border-[var(--border)]">
-                        <button
-                            onClick={handleLogout}
-                            className={`
-                                flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all
-                                text-[var(--error)] hover:bg-[var(--error-light)]
-                                ${sidebarCollapsed ? 'justify-center' : ''}
-                            `}
-                            title={sidebarCollapsed ? 'Sair' : ''}
-                        >
-                            <LogOut className="w-5 h-5" />
-                            {!sidebarCollapsed && <span className="text-sm font-medium">Sair</span>}
-                        </button>
-                    </div>
+                    <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-[var(--gray-500)] hover:bg-[var(--error-light)] hover:text-[var(--error)] transition-colors"
+                    >
+                        <LogOut className="w-5 h-5" />
+                        <span>Sair</span>
+                    </button>
                 </div>
             </aside>
 
             {/* Main Content */}
-            <div
-                className="transition-all duration-300 ease-in-out"
-                style={{ marginLeft: `calc(${sidebarWidth})` }}
-            >
+            <div className="lg:pl-[260px] min-h-screen">
                 {/* Top Bar */}
-                <header className="h-16 border-b border-[var(--border)] bg-white px-4 lg:px-6 flex items-center justify-between sticky top-0 z-30">
-                    {/* Mobile Menu Button */}
-                    <button
-                        onClick={() => setSidebarOpen(!sidebarOpen)}
-                        className="lg:hidden p-2 rounded-xl hover:bg-[var(--gray-100)] text-[var(--foreground-secondary)]"
-                    >
-                        <Menu className="w-5 h-5" />
-                    </button>
+                <header className="sticky top-0 z-30 h-16 bg-white/80 backdrop-blur-md border-b border-[var(--gray-200)] px-4 lg:px-6">
+                    <div className="flex items-center justify-between h-full max-w-[1400px] mx-auto">
+                        {/* Left Side */}
+                        <div className="flex items-center gap-4">
+                            {/* Mobile Menu Button */}
+                            <button
+                                onClick={() => setSidebarOpen(true)}
+                                className="lg:hidden p-2 -ml-2 rounded-xl hover:bg-[var(--gray-100)] text-[var(--gray-600)]"
+                            >
+                                <Menu className="w-5 h-5" />
+                            </button>
 
-                    {/* Page Title */}
-                    <div className="lg:hidden font-semibold text-[var(--foreground)]">
-                        {navItems.find(item => pathname.startsWith(item.href))?.label || 'Dashboard'}
-                    </div>
-
-                    {/* Spacer */}
-                    <div className="hidden lg:block" />
-
-                    {/* Right Side */}
-                    <div className="flex items-center gap-3">
-                        {/* Notifications */}
-                        <button className="p-2 rounded-xl hover:bg-[var(--gray-100)] text-[var(--foreground-secondary)] relative">
-                            <Bell className="w-5 h-5" />
-                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[var(--primary)] rounded-full" />
-                        </button>
-
-                        {/* Profile */}
-                        <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-[var(--primary-light)] text-[var(--primary)] flex items-center justify-center text-sm font-semibold">
-                                GFL
+                            {/* Breadcrumb / Page Title */}
+                            <div className="hidden sm:flex items-center gap-2 text-sm">
+                                <Link href="/dashboard" className="text-[var(--gray-500)] hover:text-[var(--gray-700)]">
+                                    Dashboard
+                                </Link>
+                                {pathname !== '/dashboard' && (
+                                    <>
+                                        <ChevronLeft className="w-4 h-4 text-[var(--gray-400)] rotate-180" />
+                                        <span className="text-[var(--gray-900)] font-medium">
+                                            {navItems.find(item => pathname.startsWith(item.href) && item.href !== '/dashboard')?.label || 'Página'}
+                                        </span>
+                                    </>
+                                )}
                             </div>
-                            <div className="hidden md:block">
-                                <p className="text-sm font-medium text-[var(--foreground)]">Gabriela</p>
-                                <p className="text-xs text-[var(--foreground-muted)]">Psicóloga</p>
+
+                            {/* Mobile Title */}
+                            <span className="sm:hidden text-sm font-semibold text-[var(--gray-900)]">
+                                {navItems.find(item => pathname.startsWith(item.href))?.label || 'Dashboard'}
+                            </span>
+                        </div>
+
+                        {/* Right Side */}
+                        <div className="flex items-center gap-2">
+                            {/* Notifications */}
+                            <button className="relative p-2 rounded-xl hover:bg-[var(--gray-100)] text-[var(--gray-600)]">
+                                <Bell className="w-5 h-5" />
+                                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[var(--lavender-500)] rounded-full ring-2 ring-white" />
+                            </button>
+
+                            {/* Profile (desktop only) */}
+                            <div className="hidden lg:flex items-center gap-2 ml-2 pl-2 border-l border-[var(--gray-200)]">
+                                <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold"
+                                    style={{ background: 'linear-gradient(135deg, var(--lavender-200) 0%, var(--sky-200) 100%)', color: 'var(--lavender-700)' }}>
+                                    GFL
+                                </div>
+                                <div className="hidden xl:block">
+                                    <p className="text-sm font-medium text-[var(--gray-900)]">Gabriela</p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </header>
 
                 {/* Page Content */}
-                <main className="p-4 lg:p-6">
+                <main className="p-4 lg:p-6 max-w-[1400px] mx-auto">
                     {children}
                 </main>
             </div>
