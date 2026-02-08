@@ -160,6 +160,10 @@
   --input-border: var(--gray-600);
 }
 
+/* 
+ * MODO ESCURO DESATIVADO TEMPORARIAMENTE
+ * Descomente quando o design escuro estiver pronto
+ *
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --background: #000000;
@@ -175,6 +179,7 @@
     --border: var(--gray-700);
   }
 }
+*/
 
 /* Tailwind Theme Integration */
 @theme inline {
