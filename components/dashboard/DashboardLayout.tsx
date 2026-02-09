@@ -16,7 +16,8 @@ import {
     Bell,
     ChevronLeft,
     ChevronRight,
-    Search
+    Search,
+    User
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -41,12 +42,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     const pathname = usePathname()
     const router = useRouter()
     const [sidebarOpen, setSidebarOpen] = useState(false) // Mobile drawer state
+    const [sidebarExpanded, setSidebarExpanded] = useState(true) // Desktop expand/collapse
     const [isMobile, setIsMobile] = useState(false)
 
     useEffect(() => {
         const checkMobile = () => {
             const mobile = window.innerWidth < 1024
             setIsMobile(mobile)
+            if (mobile) {
+                setSidebarExpanded(true) // Always expanded inside drawer
+            }
         }
         checkMobile()
         window.addEventListener('resize', checkMobile)
@@ -60,8 +65,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         router.refresh()
     }
 
+    // Dynamic width for desktop
+    const sidebarWidth = sidebarExpanded ? 280 : 88
+
     return (
-        <div className="min-h-screen bg-[#F5F6F8] flex">
+        <div className="min-h-screen bg-[#F2F4F8] flex">
             {/* Mobile Overlay */}
             {sidebarOpen && isMobile && (
                 <div
@@ -70,74 +78,131 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 />
             )}
 
-            {/* Sidebar - Fixed Full Height */}
+            {/* Sidebar */}
             <aside
                 className={`
-                    fixed inset-y-0 left-0 z-50 bg-white shadow-lg transition-transform duration-300 ease-in-out
-                    flex flex-col w-[280px]
-                    ${isMobile ? (sidebarOpen ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'}
+                    fixed z-50 bg-white shadow-xl transition-all duration-300 ease-in-out
+                    flex flex-col justify-between border-r border-gray-100/50
+                    ${isMobile
+                        ? 'inset-y-0 left-0 w-[280px]'
+                        : `top-4 bottom-4 left-4 rounded-[2.5rem] border-r-0 ${sidebarExpanded ? 'w-[280px]' : 'w-[88px]'}`
+                    }
+                    ${isMobile && !sidebarOpen ? '-translate-x-full' : 'translate-x-0'}
                 `}
             >
-                {/* Profile Header */}
-                <div className="p-8 pb-6">
-                    <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 bg-gray-200">
-                            {/* Placeholder if no image */}
-                            <img
-                                src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                                alt="Profile"
-                                className="w-full h-full object-cover"
-                            />
+                {/* Profile Header (Top) */}
+                <div className={`
+                    flex flex-col items-center pt-8 pb-6 px-4 transition-all duration-300
+                    ${!sidebarExpanded && !isMobile ? 'px-2' : ''}
+                `}>
+                    <div className="relative mb-4 group cursor-pointer">
+                        <div className={`
+                            relative rounded-full p-1 bg-gradient-to-tr from-purple-500 to-blue-500
+                            ${!sidebarExpanded && !isMobile ? 'w-12 h-12' : 'w-20 h-20'}
+                            transition-all duration-300
+                        `}>
+                            <div className="w-full h-full rounded-full bg-white p-0.5 overflow-hidden">
+                                <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400 font-bold">
+                                    {/* Placeholder for user image */}
+                                    <span className={!sidebarExpanded && !isMobile ? 'text-sm' : 'text-2xl'}>GF</span>
+                                </div>
+                            </div>
                         </div>
-                        <div className="flex flex-col min-w-0">
-                            <h2 className="font-bold text-gray-900 text-[15px] leading-tight truncate">Gabriela Fernandes</h2>
-                            <p className="text-sm text-gray-500 font-medium">CRP 06/123456</p>
-                        </div>
+                        {/* Status Indicator */}
+                        <div className={`
+                            absolute bottom-1 right-1 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full
+                            ${!sidebarExpanded && !isMobile ? 'scale-75 bottom-0 right-0' : ''}
+                        `}></div>
+                    </div>
+
+                    {/* Text Info - Only visible when expanded */}
+                    <div className={`
+                        text-center transition-all duration-300 overflow-hidden
+                        ${!sidebarExpanded && !isMobile ? 'h-0 opacity-0' : 'h-auto opacity-100'}
+                    `}>
+                        <h2 className="font-bold text-gray-900 text-lg leading-tight truncate px-2">Gabriela Fernandes</h2>
+                        <p className="text-sm text-purple-600 font-medium">Psicóloga Clínica</p>
                     </div>
                 </div>
 
-                {/* Navigation Links */}
-                <nav className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-2">
-                    <div className="space-y-1">
-                        {navItems.map((item) => {
-                            const isActive = pathname === item.href ||
-                                (item.href !== '/dashboard' && pathname.startsWith(item.href))
+                {/* Navigation Links (Middle) */}
+                <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-4 space-y-2">
+                    {/* Collapse Toggle (Desktop only, positioned relative to nav) */}
+                    {!isMobile && (
+                        <div className="absolute top-8 -right-3 z-50">
+                            <button
+                                onClick={() => setSidebarExpanded(!sidebarExpanded)}
+                                className="w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center shadow-md hover:bg-purple-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+                            >
+                                {sidebarExpanded ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                            </button>
+                        </div>
+                    )}
 
-                            return (
-                                <Link
-                                    key={item.href}
-                                    href={item.href}
-                                    onClick={() => isMobile && setSidebarOpen(false)}
+                    {navItems.map((item) => {
+                        const isActive = pathname === item.href ||
+                            (item.href !== '/dashboard' && pathname.startsWith(item.href))
+
+                        return (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                onClick={() => isMobile && setSidebarOpen(false)}
+                                className={`
+                                    flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-200 group relative
+                                    ${isActive
+                                        ? 'bg-purple-600 text-white shadow-lg shadow-purple-200'
+                                        : 'text-gray-500 hover:bg-purple-50 hover:text-purple-600'
+                                    }
+                                    ${!sidebarExpanded && !isMobile ? 'justify-center px-0 w-12 h-12 mx-auto' : ''}
+                                `}
+                                title={!sidebarExpanded ? item.label : ''}
+                            >
+                                <item.icon
                                     className={`
-                                        flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-200 group
-                                        ${isActive
-                                            ? 'bg-purple-100/80 text-gray-900 font-bold'
-                                            : 'text-gray-600 hover:text-purple-600'
-                                        }
+                                        w-[22px] h-[22px] transition-transform duration-200
+                                        ${!sidebarExpanded && !isMobile ? '' : 'group-hover:scale-110'}
+                                        ${isActive ? 'text-white' : ''}
                                     `}
-                                >
-                                    <item.icon
-                                        className={`
-                                            w-[22px] h-[22px]
-                                            ${isActive ? 'text-purple-700' : 'text-gray-500 group-hover:text-purple-600'}
-                                        `}
-                                        strokeWidth={isActive ? 2.5 : 2}
-                                    />
-                                    <span className="text-[15px]">{item.label}</span>
-                                </Link>
-                            )
-                        })}
-                    </div>
+                                />
+
+                                <span className={`
+                                    font-medium whitespace-nowrap transition-all duration-300 origin-left
+                                    ${!sidebarExpanded && !isMobile ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100'}
+                                `}>
+                                    {item.label}
+                                </span>
+
+                                {/* Tooltip for collapsed state */}
+                                {!sidebarExpanded && !isMobile && (
+                                    <div className="absolute left-full ml-4 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none shadow-xl">
+                                        {item.label}
+                                        {/* Little triangles for tooltip could go here */}
+                                    </div>
+                                )}
+                            </Link>
+                        )
+                    })}
                 </nav>
 
-                {/* Logout Button */}
-                <div className="p-6 mt-auto">
+                {/* Logout Button (Bottom) */}
+                <div className="p-4 border-t border-gray-100/50">
                     <button
                         onClick={handleLogout}
-                        className="flex items-center gap-4 px-4 py-3.5 rounded-xl w-full text-gray-600 hover:text-red-600 transition-colors group"
+                        className={`
+                            flex items-center gap-4 px-4 py-3.5 rounded-2xl w-full transition-all duration-200
+                            text-gray-400 hover:bg-red-50 hover:text-red-600
+                            ${!sidebarExpanded && !isMobile ? 'justify-center px-0 w-12 h-12 mx-auto' : ''}
+                        `}
+                        title="Sair"
                     >
-                        <LogOut className="w-[22px] h-[22px] text-gray-500 group-hover:text-red-500" />
-                        <span className="font-medium text-[15px]">Sair</span>
+                        <LogOut className={`w-[22px] h-[22px] ${!sidebarExpanded && !isMobile ? '' : ''}`} />
+                        <span className={`
+                            font-medium whitespace-nowrap transition-all duration-300
+                            ${!sidebarExpanded && !isMobile ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100'}
+                        `}>
+                            Sair da conta
+                        </span>
                     </button>
                 </div>
             </aside>
@@ -145,7 +210,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             {/* Main Content Area */}
             <main
                 className={`flex-1 transition-all duration-300 ease-in-out min-h-screen flex flex-col
-                    ${isMobile ? 'ml-0' : 'ml-[280px]'}
+                    ${isMobile ? 'ml-0' : ''}
+                    ${!isMobile && sidebarExpanded ? 'ml-[312px]' : ''}
+                    ${!isMobile && !sidebarExpanded ? 'ml-[120px]' : ''}
                 `}
             >
                 {/* Mobile Header */}
@@ -166,13 +233,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                             <Bell className="w-5 h-5 text-gray-600" />
                             <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
                         </button>
+                        <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold text-sm">
+                            GF
+                        </div>
                     </div>
                 </header>
 
-                {/* Desktop Header (Without Profile/Search to match minimalist look if desired, or keep search)
-                    The user's reference image for the sidebar implies a change to the sidebar primarily.
-                    I will keep a minimal header for context but remove the duplicate profile info.
-                 */}
+                {/* Desktop Header (Minimalist) */}
                 <header className={`
                     hidden lg:flex items-center justify-between h-20 px-8 py-4 mb-2
                 `}>
