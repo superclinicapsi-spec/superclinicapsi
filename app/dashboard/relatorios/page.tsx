@@ -4,7 +4,6 @@ import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useState, useEffect, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import {
-    ReportCard,
     ProgressChart,
     GoalsChart,
     PromptDistributionChart,
@@ -17,6 +16,7 @@ import {
     Users,
     Download,
     Filter,
+    ChevronsUp
 } from 'lucide-react';
 
 interface Patient {
@@ -50,10 +50,10 @@ interface Progress {
 }
 
 const PERIODS = [
-    { value: '7', label: '7 dias' },
-    { value: '30', label: '30 dias' },
-    { value: '90', label: '90 dias' },
-    { value: 'all', label: 'Todo período' },
+    { value: '7', label: 'Últimos 7 dias' },
+    { value: '30', label: 'Últimos 30 dias' },
+    { value: '90', label: 'Últimos 90 dias' },
+    { value: 'all', label: 'Todo o período' },
 ];
 
 export default function RelatoriosPage() {
@@ -89,6 +89,9 @@ export default function RelatoriosPage() {
             .order('full_name');
 
         setPatients(data || []);
+        if (data && data.length > 0) {
+            // setSelectedPatient(data[0].id); // Optional auto-select
+        }
         setLoading(false);
     }
 
@@ -138,14 +141,14 @@ export default function RelatoriosPage() {
                 const { data: progressData } = await supabase
                     .from('aba_progress')
                     .select(`
-            id,
-            session_id,
-            goal_id,
-            trials,
-            correct,
-            prompt_level,
-            session:aba_sessions(session_date)
-          `)
+                        id,
+                        session_id,
+                        goal_id,
+                        trials,
+                        correct,
+                        prompt_level,
+                        session:aba_sessions(session_date)
+                    `)
                     .in('session_id', sessionIds);
 
                 setProgress((progressData as unknown as Progress[]) || []);
@@ -260,126 +263,180 @@ export default function RelatoriosPage() {
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-semibold">Relatórios</h1>
-                        <p className="text-muted text-sm mt-1">
-                            Visualize a evolução e progresso dos pacientes
+                        <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 tracking-tight">Relatórios</h1>
+                        <p className="text-gray-500 mt-1">
+                            Análise detalhada de evolução e métricas clínicas
                         </p>
                     </div>
+                    {selectedPatient && (
+                        <button className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 shadow-sm transition-all">
+                            <Download className="w-4 h-4" />
+                            Exportar PDF
+                        </button>
+                    )}
                 </div>
 
                 {/* Filters */}
-                <div className="card">
-                    <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="flex-1">
-                            <label className="label">Paciente</label>
-                            <select
-                                className="input-field select-field"
-                                value={selectedPatient}
-                                onChange={(e) => setSelectedPatient(e.target.value)}
-                            >
-                                <option value="">Selecione um paciente...</option>
-                                {patients.map((patient) => (
-                                    <option key={patient.id} value={patient.id}>
-                                        {patient.full_name}
-                                    </option>
-                                ))}
-                            </select>
+                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                    <div className="flex flex-col md:flex-row items-center gap-4">
+                        <div className="flex-1 w-full md:w-auto">
+                            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Paciente</label>
+                            <div className="relative">
+                                <select
+                                    className="w-full h-11 pl-4 pr-10 rounded-lg bg-gray-50 border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-300 transition-all appearance-none font-medium"
+                                    value={selectedPatient}
+                                    onChange={(e) => setSelectedPatient(e.target.value)}
+                                >
+                                    <option value="">Selecione um paciente...</option>
+                                    {patients.map((patient) => (
+                                        <option key={patient.id} value={patient.id}>
+                                            {patient.full_name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <Users className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                            </div>
                         </div>
-                        <div className="sm:w-48">
-                            <label className="label">Período</label>
-                            <select
-                                className="input-field select-field"
-                                value={period}
-                                onChange={(e) => setPeriod(e.target.value)}
-                            >
-                                {PERIODS.map((p) => (
-                                    <option key={p.value} value={p.value}>
-                                        {p.label}
-                                    </option>
-                                ))}
-                            </select>
+
+                        <div className="w-full md:w-64">
+                            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Período de Análise</label>
+                            <div className="relative">
+                                <select
+                                    className="w-full h-11 pl-4 pr-10 rounded-lg bg-gray-50 border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-300 transition-all appearance-none font-medium"
+                                    value={period}
+                                    onChange={(e) => setPeriod(e.target.value)}
+                                >
+                                    {PERIODS.map((p) => (
+                                        <option key={p.value} value={p.value}>
+                                            {p.label}
+                                        </option>
+                                    ))}
+                                </select>
+                                <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 {!selectedPatient ? (
-                    <div className="card text-center py-16">
-                        <BarChart3 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                        <p className="text-muted text-lg">Selecione um paciente para ver os relatórios</p>
+                    <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-dashed border-gray-200 text-center">
+                        <div className="w-20 h-20 bg-purple-50 rounded-full flex items-center justify-center mb-6 animate-pulse">
+                            <BarChart3 className="w-10 h-10 text-purple-200" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Selecione um Paciente</h3>
+                        <p className="text-gray-500 max-w-sm mx-auto">
+                            Escolha um paciente acima para visualizar os gráficos de progresso, metas atingidas e estatísticas detalhadas.
+                        </p>
                     </div>
                 ) : loading ? (
-                    <div className="space-y-4">
+                    <div className="space-y-6 animate-pulse">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             {[1, 2, 3, 4].map((i) => (
-                                <div key={i} className="h-32 bg-gray-100 rounded-xl animate-pulse" />
+                                <div key={i} className="h-32 bg-gray-100 rounded-xl" />
                             ))}
                         </div>
-                        <div className="h-80 bg-gray-100 rounded-xl animate-pulse" />
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div className="h-80 bg-gray-100 rounded-xl" />
+                            <div className="h-80 bg-gray-100 rounded-xl" />
+                        </div>
                     </div>
                 ) : (
-                    <>
+                    <div className="space-y-6 animate-in fade-in duration-500">
                         {/* Stats Cards */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <ReportCard
-                                title="Total de Sessões"
-                                value={stats.totalSessions}
-                                subtitle={`${stats.totalHours.toFixed(1)}h no período`}
-                                icon={Calendar}
-                                color="primary"
-                            />
-                            <ReportCard
-                                title="Média de Progresso"
-                                value={`${stats.avgProgress.toFixed(1)}%`}
-                                icon={TrendingUp}
-                                color="success"
-                            />
-                            <ReportCard
-                                title="Metas Atingidas"
-                                value={`${stats.goalsAchieved}/${goals.length}`}
-                                icon={Target}
-                                color="info"
-                            />
-                            <ReportCard
-                                title="Total de Metas"
-                                value={goals.length}
-                                subtitle="objetivos ativos"
-                                icon={Users}
-                                color="warning"
-                            />
-                        </div>
-
-                        {/* Charts */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            {/* Progress over time */}
-                            <div className="card">
-                                <h3 className="font-semibold mb-4 flex items-center gap-2">
-                                    <TrendingUp className="w-5 h-5 text-primary" />
-                                    Evolução do Progresso
-                                </h3>
-                                <ProgressChart data={progressChartData} height={280} />
+                            <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                                <div className="flex items-start justify-between mb-2">
+                                    <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                                        <Calendar className="w-5 h-5" />
+                                    </div>
+                                    <span className="text-xs font-medium text-gray-400 uppercase">Sessões</span>
+                                </div>
+                                <div className="mt-2">
+                                    <h3 className="text-3xl font-bold text-gray-900">{stats.totalSessions}</h3>
+                                    <p className="text-sm text-gray-500 font-medium">{stats.totalHours.toFixed(1)}h totais</p>
+                                </div>
                             </div>
 
-                            {/* Goals comparison */}
-                            <div className="card">
-                                <h3 className="font-semibold mb-4 flex items-center gap-2">
-                                    <Target className="w-5 h-5 text-primary" />
-                                    Comparativo de Metas
-                                </h3>
-                                <GoalsChart data={goalsChartData} height={280} />
+                            <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                                <div className="flex items-start justify-between mb-2">
+                                    <div className="p-2 bg-green-50 text-green-600 rounded-lg">
+                                        <TrendingUp className="w-5 h-5" />
+                                    </div>
+                                    <span className="text-xs font-medium text-gray-400 uppercase">Progresso Médio</span>
+                                </div>
+                                <div className="mt-2">
+                                    <h3 className="text-3xl font-bold text-gray-900">{stats.avgProgress.toFixed(0)}%</h3>
+                                    <p className="text-sm text-green-600 font-medium flex items-center gap-1">
+                                        <ChevronsUp className="w-3 h-3" /> Alta performance
+                                    </p>
+                                </div>
                             </div>
 
-                            {/* Prompt distribution */}
-                            <div className="card lg:col-span-2">
-                                <h3 className="font-semibold mb-4 flex items-center gap-2">
-                                    <BarChart3 className="w-5 h-5 text-primary" />
-                                    Distribuição de Níveis de Prompt
-                                </h3>
-                                <div className="max-w-md mx-auto">
-                                    <PromptDistributionChart data={promptChartData} height={300} />
+                            <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                                <div className="flex items-start justify-between mb-2">
+                                    <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
+                                        <Target className="w-5 h-5" />
+                                    </div>
+                                    <span className="text-xs font-medium text-gray-400 uppercase">Metas Atingidas</span>
+                                </div>
+                                <div className="mt-2">
+                                    <h3 className="text-3xl font-bold text-gray-900">{stats.goalsAchieved} <span className="text-lg text-gray-400 font-normal">/ {goals.length}</span></h3>
+                                    <p className="text-sm text-gray-500 font-medium">Objetivos concluídos</p>
                                 </div>
                             </div>
                         </div>
-                    </>
+
+                        {/* Charts Flow */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Evolution Chart */}
+                            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                                <div className="flex items-center justify-between mb-6">
+                                    <div>
+                                        <h3 className="text-lg font-bold text-gray-900">Evolução de Desempenho</h3>
+                                        <p className="text-sm text-gray-500">Média de acertos por sessão</p>
+                                    </div>
+                                    <div className="p-2 bg-purple-50 rounded-lg">
+                                        <TrendingUp className="w-5 h-5 text-purple-600" />
+                                    </div>
+                                </div>
+                                <div className="w-full overflow-hidden">
+                                    <ProgressChart data={progressChartData} height={300} />
+                                </div>
+                            </div>
+
+                            {/* Goals Comparison */}
+                            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                                <div className="flex items-center justify-between mb-6">
+                                    <div>
+                                        <h3 className="text-lg font-bold text-gray-900">Atingimento de Metas</h3>
+                                        <p className="text-sm text-gray-500">Progresso atual vs Alvo terapêutico</p>
+                                    </div>
+                                    <div className="p-2 bg-blue-50 rounded-lg">
+                                        <Target className="w-5 h-5 text-blue-600" />
+                                    </div>
+                                </div>
+                                <div className="w-full overflow-hidden">
+                                    <GoalsChart data={goalsChartData} height={300} />
+                                </div>
+                            </div>
+
+                            {/* Prompt Distribution - Full Width */}
+                            <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                                <div className="flex items-center justify-between mb-6">
+                                    <div>
+                                        <h3 className="text-lg font-bold text-gray-900">Níveis de Ajuda (Prompt)</h3>
+                                        <p className="text-sm text-gray-500">Distribuição do tipo de suporte necessário nas tentativas</p>
+                                    </div>
+                                    <div className="p-2 bg-orange-50 rounded-lg">
+                                        <BarChart3 className="w-5 h-5 text-orange-600" />
+                                    </div>
+                                </div>
+                                <div className="w-full max-w-2xl mx-auto">
+                                    <PromptDistributionChart data={promptChartData} height={350} />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 )}
             </div>
         </DashboardLayout>

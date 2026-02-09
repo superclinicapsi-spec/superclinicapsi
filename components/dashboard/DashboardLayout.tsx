@@ -3,21 +3,20 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-    Brain,
     LayoutDashboard,
     Users,
     Calendar,
+    ClipboardList,
+    BarChart3,
     FileText,
     DollarSign,
     Settings,
     LogOut,
     Menu,
     Bell,
-    ClipboardList,
-    BarChart3,
-    X,
-    PanelLeftClose,
-    PanelLeft,
+    ChevronLeft,
+    ChevronRight,
+    Search
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -41,17 +40,13 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
     const pathname = usePathname()
     const router = useRouter()
-    const [sidebarOpen, setSidebarOpen] = useState(false) // Mobile drawer
-    const [sidebarExpanded, setSidebarExpanded] = useState(true) // Desktop toggle
+    const [sidebarOpen, setSidebarOpen] = useState(false) // Mobile drawer state
     const [isMobile, setIsMobile] = useState(false)
 
     useEffect(() => {
         const checkMobile = () => {
             const mobile = window.innerWidth < 1024
             setIsMobile(mobile)
-            if (mobile) {
-                setSidebarExpanded(false)
-            }
         }
         checkMobile()
         window.addEventListener('resize', checkMobile)
@@ -65,64 +60,44 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         router.refresh()
     }
 
-    // No mobile: drawer (0 ou 260px overlay)
-    // No desktop: toggle (0 ou 260px com margin)
-    const sidebarWidth = sidebarExpanded ? 260 : 0
-
     return (
-        <div className="min-h-screen bg-[#f8f9fc]">
+        <div className="min-h-screen bg-[#F5F6F8] flex">
             {/* Mobile Overlay */}
             {sidebarOpen && isMobile && (
                 <div
-                    className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+                    className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity"
                     onClick={() => setSidebarOpen(false)}
                 />
             )}
 
-            {/* Sidebar */}
+            {/* Sidebar - Fixed Full Height */}
             <aside
-                style={{
-                    width: isMobile ? 260 : sidebarWidth,
-                    transform: isMobile
-                        ? (sidebarOpen ? 'translateX(0)' : 'translateX(-100%)')
-                        : 'translateX(0)',
-                }}
                 className={`
-                    fixed top-0 left-0 h-screen bg-white z-50
-                    border-r border-gray-200
-                    flex flex-col
-                    transition-all duration-300 ease-out
-                    ${!sidebarExpanded && !isMobile ? 'overflow-hidden' : ''}
+                    fixed inset-y-0 left-0 z-50 bg-white shadow-lg transition-transform duration-300 ease-in-out
+                    flex flex-col w-[280px]
+                    ${isMobile ? (sidebarOpen ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'}
                 `}
             >
-                {/* Close button mobile */}
-                {isMobile && sidebarOpen && (
-                    <button
-                        onClick={() => setSidebarOpen(false)}
-                        className="absolute top-4 right-4 p-2 rounded-lg hover:bg-gray-100 text-gray-500"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-                )}
-
-                {/* Brand */}
-                <div className="p-5 border-b border-gray-100">
-                    <div className="flex items-center gap-3">
-                        <div
-                            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                            style={{ background: 'linear-gradient(135deg, #9c6de0 0%, #38a3f8 100%)' }}
-                        >
-                            <Brain className="w-5 h-5 text-white" />
+                {/* Profile Header */}
+                <div className="p-8 pb-6">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 bg-gray-200">
+                            {/* Placeholder if no image */}
+                            <img
+                                src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                                alt="Profile"
+                                className="w-full h-full object-cover"
+                            />
                         </div>
-                        <div className="overflow-hidden">
-                            <span className="font-semibold text-gray-900 whitespace-nowrap">SuperClínica</span>
-                            <p className="text-xs text-gray-500 whitespace-nowrap">Psicologia Clínica</p>
+                        <div className="flex flex-col min-w-0">
+                            <h2 className="font-bold text-gray-900 text-[15px] leading-tight truncate">Gabriela Fernandes</h2>
+                            <p className="text-sm text-gray-500 font-medium">CRP 06/123456</p>
                         </div>
                     </div>
                 </div>
 
-                {/* Navigation */}
-                <nav className="flex-1 p-3 overflow-y-auto overflow-x-hidden">
+                {/* Navigation Links */}
+                <nav className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-2">
                     <div className="space-y-1">
                         {navItems.map((item) => {
                             const isActive = pathname === item.href ||
@@ -132,117 +107,104 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                                 <Link
                                     key={item.href}
                                     href={item.href}
-                                    onClick={() => setSidebarOpen(false)}
+                                    onClick={() => isMobile && setSidebarOpen(false)}
                                     className={`
-                                        flex items-center gap-3 px-3 py-2.5 rounded-xl
-                                        text-sm font-medium transition-all duration-200 whitespace-nowrap
+                                        flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-200 group
                                         ${isActive
-                                            ? 'bg-purple-100 text-purple-700'
-                                            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                                            ? 'bg-purple-100/80 text-gray-900 font-bold'
+                                            : 'text-gray-600 hover:text-purple-600'
                                         }
                                     `}
                                 >
-                                    <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-purple-600' : 'text-gray-400'}`} />
-                                    <span>{item.label}</span>
+                                    <item.icon
+                                        className={`
+                                            w-[22px] h-[22px]
+                                            ${isActive ? 'text-purple-700' : 'text-gray-500 group-hover:text-purple-600'}
+                                        `}
+                                        strokeWidth={isActive ? 2.5 : 2}
+                                    />
+                                    <span className="text-[15px]">{item.label}</span>
                                 </Link>
                             )
                         })}
                     </div>
                 </nav>
 
-                {/* Profile & Logout */}
-                <div className="p-3 border-t border-gray-100">
-                    <div className="flex items-center gap-3 px-3 py-3 mb-2 rounded-xl bg-gray-50 overflow-hidden">
-                        <div
-                            className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0"
-                            style={{ background: 'linear-gradient(135deg, #e4d4fb 0%, #bae0ff 100%)', color: '#7a3fc0' }}
-                        >
-                            GFL
-                        </div>
-                        <div className="flex-1 min-w-0 overflow-hidden">
-                            <p className="text-sm font-medium text-gray-900 truncate">Gabriela Fernandes</p>
-                            <p className="text-xs text-gray-500 truncate">CRP 06/123456</p>
-                        </div>
-                    </div>
-
+                {/* Logout Button */}
+                <div className="p-6 mt-auto">
                     <button
                         onClick={handleLogout}
-                        className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors whitespace-nowrap"
+                        className="flex items-center gap-4 px-4 py-3.5 rounded-xl w-full text-gray-600 hover:text-red-600 transition-colors group"
                     >
-                        <LogOut className="w-5 h-5 flex-shrink-0" />
-                        <span>Sair</span>
+                        <LogOut className="w-[22px] h-[22px] text-gray-500 group-hover:text-red-500" />
+                        <span className="font-medium text-[15px]">Sair</span>
                     </button>
                 </div>
             </aside>
 
-            {/* Main Content */}
-            <div
-                style={{ marginLeft: isMobile ? 0 : sidebarWidth }}
-                className="min-h-screen transition-all duration-300 ease-out"
+            {/* Main Content Area */}
+            <main
+                className={`flex-1 transition-all duration-300 ease-in-out min-h-screen flex flex-col
+                    ${isMobile ? 'ml-0' : 'ml-[280px]'}
+                `}
             >
-                {/* Top Bar */}
-                <header className="sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-sm border-b border-gray-200 px-4 lg:px-6">
-                    <div className="flex items-center justify-between h-full max-w-[1400px] mx-auto">
-                        {/* Left Side */}
-                        <div className="flex items-center gap-3">
-                            {/* Mobile Menu Button */}
-                            {isMobile && (
-                                <button
-                                    onClick={() => setSidebarOpen(true)}
-                                    className="p-2 -ml-2 rounded-xl hover:bg-gray-100 text-gray-600"
-                                >
-                                    <Menu className="w-5 h-5" />
-                                </button>
-                            )}
-
-                            {/* Desktop Toggle Button */}
-                            {!isMobile && (
-                                <button
-                                    onClick={() => setSidebarExpanded(!sidebarExpanded)}
-                                    className="p-2 -ml-2 rounded-xl hover:bg-gray-100 text-gray-600"
-                                    title={sidebarExpanded ? 'Fechar menu' : 'Abrir menu'}
-                                >
-                                    {sidebarExpanded ? <PanelLeftClose className="w-5 h-5" /> : <PanelLeft className="w-5 h-5" />}
-                                </button>
-                            )}
-
-                            {/* Page Title */}
-                            <div className="flex items-center gap-2">
-                                <span className="text-lg font-semibold text-gray-900">
-                                    {navItems.find(item => pathname.startsWith(item.href))?.label || 'Dashboard'}
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Right Side */}
-                        <div className="flex items-center gap-2">
-                            {/* Notifications */}
-                            <button className="relative p-2 rounded-xl hover:bg-gray-100 text-gray-600">
-                                <Bell className="w-5 h-5" />
-                                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-purple-500 rounded-full ring-2 ring-white" />
-                            </button>
-
-                            {/* Profile */}
-                            <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-200">
-                                <div
-                                    className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold"
-                                    style={{ background: 'linear-gradient(135deg, #e4d4fb 0%, #bae0ff 100%)', color: '#7a3fc0' }}
-                                >
-                                    GFL
-                                </div>
-                                <div className="hidden md:block">
-                                    <p className="text-sm font-medium text-gray-900">Gabriela</p>
-                                </div>
-                            </div>
-                        </div>
+                {/* Mobile Header */}
+                <header className="lg:hidden sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200 px-4 h-16 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setSidebarOpen(true)}
+                            className="p-2 -ml-2 rounded-xl text-gray-600 hover:bg-gray-100"
+                        >
+                            <Menu className="w-6 h-6" />
+                        </button>
+                        <span className="font-bold text-gray-900 text-lg">
+                            SuperClínica
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <button className="p-2 rounded-full hover:bg-gray-100 relative">
+                            <Bell className="w-5 h-5 text-gray-600" />
+                            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+                        </button>
                     </div>
                 </header>
 
-                {/* Page Content */}
-                <main className="p-4 lg:p-6 max-w-[1400px] mx-auto">
+                {/* Desktop Header (Without Profile/Search to match minimalist look if desired, or keep search)
+                    The user's reference image for the sidebar implies a change to the sidebar primarily.
+                    I will keep a minimal header for context but remove the duplicate profile info.
+                 */}
+                <header className={`
+                    hidden lg:flex items-center justify-between h-20 px-8 py-4 mb-2
+                `}>
+                    <div className="flex flex-col">
+                        <h1 className="text-2xl font-bold text-gray-800 tracking-tight">
+                            {navItems.find(item => pathname.startsWith(item.href))?.label || 'Dashboard'}
+                        </h1>
+                        <p className="text-sm text-gray-400 font-medium">
+                            {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                        </p>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Buscar..."
+                                className="pl-10 pr-4 py-2.5 bg-white border-none rounded-2xl shadow-sm w-64 text-sm focus:ring-2 focus:ring-purple-100 outline-none placeholder:text-gray-400"
+                            />
+                        </div>
+                        <button className="relative w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm hover:shadow-md transition-shadow">
+                            <Bell className="w-5 h-5 text-gray-600" />
+                            <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-red-500 rounded-full ring-1 ring-white"></span>
+                        </button>
+                    </div>
+                </header>
+
+                <div className="flex-1 px-4 lg:px-8 pb-8 max-w-[1600px] w-full mx-auto">
                     {children}
-                </main>
-            </div>
+                </div>
+            </main>
         </div>
     )
 }
